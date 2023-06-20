@@ -200,7 +200,7 @@ function _main() {
         row.title = "Lot " + row.Lot + '<span class="close">&#10005;</span>';
         row.blurb = "<p><strong>Status:</strong> " + row.Status + "</p>"
             + "<p><strong>Price:</strong> " + row.Price + "</p>"
-            + "<p><strong>Area: </strong>" + row['Area (m2)'] + " m²" + "</p>"
+            + "<p><strong>Area: </strong>" + row['Area (m2)'] + " mÂ²" + "</p>"
             + "<p><strong> Length: </strong>" + row.Length + ", Width: " + row.Width + "</p>"
             + "<p><strong>Builder:</strong> " + row.Purchaser + "</p>"
             + "<p><strong>Title Status:</strong> " + row.Expected + "</p>"
@@ -297,7 +297,7 @@ $('.close').on(function () {
 
 function parseCSV(_next) {
 
-    Papa.parse("https://raw.githubusercontent.com/james-ingot/greenhillparks/main/HTML_Image_map_for_Greenhill_Park_-_Sheet1.csv",
+    Papa.parse("https://dl.dropbox.com/s/4cmmtc0w55ott7b/HTML_Image_map_for_Greenhill_Park_-_Sheet1.csv?dl=0",
         {
             download: true,
             header: true,
