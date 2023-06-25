@@ -297,7 +297,7 @@ $('.close').on(function () {
 
 function parseCSV(_next) {
 
-    Papa.parse("/HTML_Image_map_for_Greenhill_Park_-_Sheet1.csv",
+    Papa.parse("greenhillparks/HTML_Image_map_for_Greenhill_Park_-_Sheet1.csv",
         {
             download: true,
             header: true,
