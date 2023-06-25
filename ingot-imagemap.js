@@ -297,7 +297,7 @@ $('.close').on(function () {
 
 function parseCSV(_next) {
 
-    Papa.parse("https://cdn.jsdelivr.net/gh/james-ingot/greenhillparks@1.0/HTML_Image_map_for_Greenhill_Park_-_Sheet1.csv",
+    Papa.parse("/HTML_Image_map_for_Greenhill_Park_-_Sheet1.csv",
         {
             download: true,
             header: true,
