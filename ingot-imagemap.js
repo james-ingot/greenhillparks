@@ -300,7 +300,7 @@ function _main() {
     $('.map-landscape-stage-19').mapster(landscapeContainer);
     $('.map-landscape-stage-20').mapster(landscapeContainer);
     $('.map-landscape-stage-25A').mapster(landscapeContainer);
-
+    $('.map-landscape-stage-21').mapster(landscapeContainer);
 
     // }
 }
