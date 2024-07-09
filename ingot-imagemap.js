@@ -188,6 +188,20 @@ function _main() {
                     strokeColor: "8c7503",
                 },
                 isSelectable: true,
+            },
+            {
+                name: 'stage-21',
+                title: 'Stage 21',
+                fillColor: "15371C",
+                fillOpacity: 0,
+                strokeOpacity: 0,
+                strokeColor: "8c7503",
+                key: 'stage-21',
+                render_highlight: {
+                    fillColor: "15371C",
+                    strokeColor: "8c7503",
+                },
+                isSelectable: true,
             }
         ],
         toolTipContainer: '<div class="ingot-box"></div>',
