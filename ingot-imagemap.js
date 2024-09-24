@@ -214,7 +214,7 @@ function _main() {
         row.title = "Lot " + row.Lot + '<span class="close">&#10005;</span>';
         row.blurb = "<p><strong>Status:</strong> " + row.Status + "</p>"
             + "<p><strong>Price:</strong> " + row.Price + "</p>"
-            + "<p><strong>Area: </strong>" + row['Area (m2)'] + " m²" + "</p>"
+            + "<p><strong>Area: </strong>" + row['Area (m2)'] + " m2" + "</p>"
             + "<p><strong> Length: </strong>" + row.Length + ", Width: " + row.Width + "</p>"
             + "<p><strong>Builder:</strong> " + row.Purchaser + "</p>"
             + "<p><strong>Title Status:</strong> " + row.Expected + "</p>"
