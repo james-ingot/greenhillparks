@@ -202,6 +202,20 @@ function _main() {
                     strokeColor: "8c7503",
                 },
                 isSelectable: true,
+            },
+            {
+                name: 'stage-24',
+                title: 'Stage 24',
+                fillColor: "15371C",
+                fillOpacity: 0,
+                strokeOpacity: 0,
+                strokeColor: "8c7503",
+                key: 'stage-24',
+                render_highlight: {
+                    fillColor: "15371C",
+                    strokeColor: "8c7503",
+                },
+                isSelectable: true,
             }
         ],
         toolTipContainer: '<div class="ingot-box"></div>',
@@ -301,6 +315,7 @@ function _main() {
     $('.map-landscape-stage-20').mapster(landscapeContainer);
     $('.map-landscape-stage-25A').mapster(landscapeContainer);
     $('.map-landscape-stage-21').mapster(landscapeContainer);
+    $('.map-landscape-stage-24').mapster(landscapeContainer);
 
     // }
 }
