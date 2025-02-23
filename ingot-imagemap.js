@@ -221,21 +221,26 @@ function _main() {
         toolTipContainer: '<div class="ingot-box"></div>',
     }
 
-    //for each row in the sheet;
+    // For each row in the sheet
     sheet.forEach((row, index, array) => {
-
-
         row.title = "Lot " + row.Lot + '<span class="close">&#10005;</span>';
-        row.blurb = "<p><strong>Status:</strong> " + row.Status + "</p>"
-            + "<p><strong>Price:</strong> " + row.Price + "</p>"
-            + "<p><strong>Area: </strong>" + row['Area (m2)'] + " m2" + "</p>"
-            + "<p><strong> Length: </strong>" + row.Length + ", Width: " + row.Width + "</p>"
-            + "<p><strong>Builder:</strong> " + row.Purchaser + "</p>"
-            + "<p><strong>Title Status:</strong> " + row.Expected + "</p>"
-            + "<h2 style='color:black; font-size:30px; margin-bottom:10px;'>Contact:</h2>"
-            + "<p><strong>Email: </strong><a href='mailto:info@greenhillpark.co.nz'>info@greenhillpark.co.nz</a></p>"
-            + "<p><strong>Phone: </strong><a href='tel:0800639929'>0800 639 929</a></p>"
-            ;
+
+        // Build the 'blurb' string only if the value exists
+        row.blurb = "";
+
+        if (row.Status) row.blurb += `<p><strong>Status:</strong> ${row.Status}</p>`;
+        if (row.Price) row.blurb += `<p><strong>Price:</strong> ${row.Price}</p>`;
+        if (row['Area (m2)']) row.blurb += `<p><strong>Area:</strong> ${row['Area (m2)']} m2</p>`;
+        if (row.Length || row.Width) row.blurb += `<p><strong>Length:</strong> ${row.Length || ''}, <strong>Width:</strong> ${row.Width || ''}</p>`;
+        if (row.Purchaser) row.blurb += `<p><strong>Builder:</strong> ${row.Purchaser}</p>`;
+        if (row.Expected) row.blurb += `<p><strong>Title Status:</strong> ${row.Expected}</p>`;
+
+        // Contact info is always displayed
+        row.blurb += `
+            <h2 style='color:black; font-size:30px; margin-bottom:10px;'>Contact:</h2>
+            <p><strong>Email:</strong> <a href='mailto:info@greenhillpark.co.nz'>info@greenhillpark.co.nz</a></p>
+            <p><strong>Phone:</strong> <a href='tel:0800639929'>0800 639 929</a></p>
+        `;
 
         switch (row.Status) {
             case "Available":
