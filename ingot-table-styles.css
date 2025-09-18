@@ -1,0 +1,177 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f7f9;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+}
+
+.filters {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-container {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 600px;
+}
+
+.filter-group {
+    width: 200px;
+    margin-bottom: 0;
+}
+
+.filter-group label.hidden {
+    display: none;
+}
+
+.filter-group select, .filter-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+button {
+    padding: 10px 20px;
+    background: #15371b;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: rgba(0, 25, 0, 1);
+}
+
+button.reset {
+    background: #c0392b;
+}
+
+button.reset:hover {
+    background: #9b2a1d;
+}
+
+.results-info {
+    margin-bottom: 15px;
+    font-weight: 500;
+    color: #7f8c8d;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #15371b;
+    color: white;
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+}
+
+th:hover {
+    background-color: rgba(0, 25, 0, 1);
+}
+
+tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+tr:hover {
+    background-color: rgb(42 109 54 / 30%);
+}
+
+.status-sold {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.status-available {
+    color: #e67e22;
+    font-weight: 600;
+}
+
+.no-results {
+    text-align: center;
+    padding: 30px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .filters {
+        align-items: stretch;
+        border-radius: 0;
+        margin-bottom: 10px
+    }
+    .results-info {
+        padding: 0 5px;
+    }
+    th, td {
+        padding: 5px;
+        font-size: 12px;
+    }
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        min-width: 330px;
+    }
+            
+    .container {
+        margin: 0;
+        padding: 0;
+    }
+}
