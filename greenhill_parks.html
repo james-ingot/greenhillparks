@@ -1,0 +1,592 @@
+<!-- Fetch data from Google Sheets -->
+<script>
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz2re1uG4QMv6oO57FAtIulCVLQfwoTjz3PC0A55C5N3oPTiSTF_4qoxqV7iVLsuVoB/exec';
+let currentSortField = null;
+let currentSortAscending = true;
+let lotData = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for stage-{number}[A-Z]? in the URL (e.g., stage-25, stage-25A)
+    const urlStageMatch = window.location.pathname.match(/stage-([\da-z]+)/i);
+    let stageFromUrl = null;
+    if (urlStageMatch) {
+        stageFromUrl = urlStageMatch[1];
+    }
+
+    fetch(WEB_APP_URL)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Normalize property names to match expected keys
+                lotData = data.data.map(item => ({
+                    lot: item.lot || item.Lot || item["Lot #"] || '',
+                    status: item.status || item.Status || '',
+                    area: item.area || item.Area || item["Area (m2)"] || '',
+                    stage: item.stage || item.Stage || '',
+                    price: item.price || item.Price || ''
+                })).filter(item => {
+                    // Remove any with stage 'Stage 16' or 'Stage 17' (case/whitespace insensitive)
+                    const s = String(item.stage).replace(/\s+/g, '').toLowerCase();
+                    return s !== 'stage16' && s !== 'stage17';
+                });
+
+                if (stageFromUrl) {
+                    // Only show lots for this stage, matching 'Stage 25A', 'stage25a', '25A', etc.
+                    lotData = lotData.filter(item => {
+                        const normalized = String(item.stage).replace(/\s+/g, '').toLowerCase();
+                        const urlStage = String(stageFromUrl).replace(/\s+/g, '').toLowerCase();
+                        return (
+                            normalized === `stage${urlStage}` ||
+                            normalized === urlStage
+                        );
+                    });
+                    // Remove the stage filter dropdown
+                    const stageFilterGroup = document.querySelector('.filter-group select#stage-filter')?.parentElement;
+                    if (stageFilterGroup) {
+                        stageFilterGroup.remove();
+                    }
+                } else {
+                    populateFilters();
+                }
+                // Sort so 'Available' status is at the top on initial load
+                const sortedInitial = [...lotData].sort((a, b) => {
+                    if (a.status === 'Available' && b.status !== 'Available') return -1;
+                    if (a.status !== 'Available' && b.status === 'Available') return 1;
+                    return 0;
+                });
+                renderTable(sortedInitial);
+            } else {
+                document.getElementById('table-body').innerHTML = 
+                    '<tr><td colspan="9">Error loading data: ' + data.error + '</td></tr>';
+            }
+        })
+        .catch(error => {
+            document.getElementById('table-body').innerHTML = 
+                '<tr><td colspan="9">Error connecting to data source: ' + error.message + '</td></tr>';
+        });
+
+    document.getElementById('apply-filters').addEventListener('click', applyFilters);
+    document.getElementById('reset-filters').addEventListener('click', resetFilters);
+
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const sortBy = th.getAttribute('data-sort');
+                let currentlyAscending = th.getAttribute('data-sort-direction');
+                // Default: price sorts descending first, others ascending
+                let ascending;
+                if (currentlyAscending === null) {
+                    ascending = sortBy === 'price' ? false : true;
+                } else {
+                    ascending = currentlyAscending === 'asc' ? false : true;
+                }
+                sortTable(sortBy, ascending);
+
+                document.querySelectorAll('th[data-sort]').forEach(header => {
+                    header.textContent = header.textContent.replace(' ↑', '').replace(' ↓', '');
+                    header.removeAttribute('data-sort-direction');
+                });
+
+                th.textContent = th.textContent.replace(' ↕', '') + (ascending ? ' ↑' : ' ↓');
+                th.setAttribute('data-sort-direction', ascending ? 'asc' : 'desc');
+            });
+    });
+
+    // Add event listeners for sort toggle buttons
+    const areaBtn = document.getElementById('sort-area-toggle');
+    if (areaBtn) {
+        areaBtn.addEventListener('click', function() {
+            let ascending = currentSortField === 'area' ? !currentSortAscending : true;
+            currentSortField = 'area';
+            currentSortAscending = ascending;
+            sortTable('area', ascending);
+            updateSortToggleButtons();
+        });
+    }
+    const priceBtn = document.getElementById('sort-price-toggle');
+    if (priceBtn) {
+        priceBtn.addEventListener('click', function() {
+            let ascending = currentSortField === 'price' ? !currentSortAscending : false;
+            currentSortField = 'price';
+            currentSortAscending = ascending;
+            sortTable('price', ascending);
+            updateSortToggleButtons();
+        });
+    }
+    // After initial render, update button state
+    updateSortToggleButtons();
+});
+
+function populateFilters() {
+    let stages = [...new Set(lotData.map(item => item.stage))].filter(stage => stage);
+    // Sort stages descending by number if possible
+    stages = stages.sort((a, b) => {
+        // Extract numbers from 'Stage 25', 'Stage 18', etc.
+        const numA = parseInt(String(a).replace(/[^\d]/g, ''));
+        const numB = parseInt(String(b).replace(/[^\d]/g, ''));
+        if (!isNaN(numA) && !isNaN(numB)) {
+            return numB - numA;
+        }
+        // Fallback to string comparison
+        return String(b).localeCompare(String(a));
+    });
+    const stageFilter = document.getElementById('stage-filter');
+    stageFilter.innerHTML = '<option value="all">All Stages</option>';
+    stages.forEach(stage => {
+        const option = document.createElement('option');
+        option.value = stage;
+        option.textContent = stage;
+        stageFilter.appendChild(option);
+    });
+}
+
+function applyFilters() {
+    const statusFilter = document.getElementById('status-filter').value;
+    const stageFilter = document.getElementById('stage-filter').value;
+
+    const filteredData = lotData.filter(item => {
+        return (statusFilter === 'all' || item.status === statusFilter) &&
+                     (stageFilter === 'all' || item.stage === stageFilter);
+    });
+
+    renderTable(filteredData);
+}
+
+function resetFilters() {
+    document.getElementById('status-filter').value = 'all';
+    document.getElementById('stage-filter').value = 'all';
+
+    renderTable(lotData);
+}
+
+function formatPrice(price) {
+    if (typeof price === 'number') {
+        return '$' + price.toLocaleString();
+    }
+    if (typeof price === 'string') {
+        let trimmed = price.trim();
+        // Handle $1.38m or 1.38m as $1,380,000
+        const millionMatch = trimmed.match(/\$?([\d,.]+)m/i);
+        if (millionMatch) {
+            let num = parseFloat(millionMatch[1].replace(/,/g, ''));
+            if (!isNaN(num)) {
+                return '$' + (num * 1_000_000).toLocaleString();
+            }
+        }
+        // Handle normal numbers, with or without $
+        let num = parseFloat(trimmed.replace(/[$,]/g, ''));
+        if (!isNaN(num)) {
+            return '$' + num.toLocaleString();
+        }
+    }
+    return price;
+}
+
+function renderTable(data) {
+    const tableBody = document.getElementById('table-body');
+    tableBody.innerHTML = '';
+
+    // Check for stage-{number} in the URL
+    const urlStageMatch = window.location.pathname.match(/stage-(\d+)/i);
+    const showStageColumn = !urlStageMatch;
+
+    // Update table header
+    const tableHeadRow = document.querySelector('#lots-table thead tr');
+    if (tableHeadRow) {
+        tableHeadRow.innerHTML = showStageColumn
+            ? `<th data-sort="lot">Lot # ↕</th>
+               <th data-sort="status">Status ↕</th>
+               <th data-sort="area">Area (m²) ↕</th>
+               <th data-sort="stage">Stage ↕</th>
+               <th data-sort="price">Price ↕</th>`
+            : `<th data-sort="lot">Lot # ↕</th>
+               <th data-sort="status">Status ↕</th>
+               <th data-sort="area">Area (m²) ↕</th>
+               <th data-sort="price">Price ↕</th>`;
+        // Re-attach sorting event listeners
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const sortBy = th.getAttribute('data-sort');
+                let ascending;
+                if (currentSortField === sortBy) {
+                    // Toggle direction if same column
+                    ascending = !currentSortAscending;
+                } else {
+                    // Default: price sorts descending first, others ascending
+                    ascending = sortBy === 'price' ? false : true;
+                }
+                currentSortField = sortBy;
+                currentSortAscending = ascending;
+                sortTable(sortBy, ascending);
+
+                document.querySelectorAll('th[data-sort]').forEach(header => {
+                    header.textContent = header.textContent.replace(' ↑', '').replace(' ↓', '');
+                    header.removeAttribute('data-sort-direction');
+                });
+
+                th.textContent = th.textContent.replace(' ↕', '') + (ascending ? ' ↑' : ' ↓');
+                th.setAttribute('data-sort-direction', ascending ? 'asc' : 'desc');
+            });
+        });
+    }
+
+    if (data.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="${showStageColumn ? 5 : 4}" class="no-results">No lots match your filters</td>`;
+        tableBody.appendChild(row);
+    } else {
+        data.forEach(item => {
+            const statusClass = item.status === 'Sold' ? 'status-sold' : 'status-available';
+            // Build the section URL for this row
+            let stagePart = String(item.stage).replace(/^stage\s*/i, '').trim();
+            stagePart = stagePart.replace(/\s+/g, '');
+            const sectionUrl = `https://www.greenhillpark.co.nz/stage-${stagePart}-sections/`;
+            const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
+            // Open in a new tab (optional)
+            row.addEventListener('click', () => {
+                window.open(sectionUrl, '_blank');
+            });
+            row.innerHTML = showStageColumn
+                ? `
+                    <td>${item.lot}</td>
+                    <td class="${statusClass}">${item.status}</td>
+                    <td>${item.area}</td>
+                    <td>${item.stage}</td>
+                    <td>${formatPrice(item.price)}</td>
+                  `
+                : `
+                    <td>${item.lot}</td>
+                    <td class="${statusClass}">${item.status}</td>
+                    <td>${item.area}</td>
+                    <td>${formatPrice(item.price)}</td>
+                  `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    document.getElementById('results-count').textContent = data.length;
+    document.getElementById('total-count').textContent = lotData.length;
+}
+
+function parsePriceForSort(price) {
+    if (typeof price === 'number') return price;
+    if (typeof price === 'string') {
+        let trimmed = price.trim();
+        // $1.38m or 1.38m
+        const millionMatch = trimmed.match(/\$?([\d,.]+)m/i);
+        if (millionMatch) {
+            let num = parseFloat(millionMatch[1].replace(/,/g, ''));
+            if (!isNaN(num)) return num * 1_000_000;
+        }
+        // Normal number
+        let num = parseFloat(trimmed.replace(/[$,]/g, ''));
+        if (!isNaN(num)) return num;
+    }
+    return 0;
+}
+
+function sortTable(field, ascending) {
+    const sortedData = [...lotData].sort((a, b) => {
+        let valueA = a[field];
+        let valueB = b[field];
+
+        if (field === 'lot' || field === 'area') {
+            valueA = parseFloat(valueA) || 0;
+            valueB = parseFloat(valueB) || 0;
+        }
+
+        if (field === 'price') {
+            valueA = parsePriceForSort(valueA);
+            valueB = parsePriceForSort(valueB);
+        }
+
+        if (valueA < valueB) return ascending ? -1 : 1;
+        if (valueA > valueB) return ascending ? 1 : -1;
+        return 0;
+    });
+
+    renderTable(sortedData);
+}
+
+function updateSortToggleButtons() {
+    // Status
+    const areaBtn = document.getElementById('sort-area-toggle');
+    if (areaBtn) {
+        if (currentSortField === 'area') {
+            areaBtn.classList.add('active');
+            areaBtn.querySelector('.arrow').textContent = currentSortAscending ? '↑' : '↓';
+        } else {
+            areaBtn.classList.remove('active');
+            areaBtn.querySelector('.arrow').textContent = '↑';
+        }
+    }
+    // Price
+    const priceBtn = document.getElementById('sort-price-toggle');
+    if (priceBtn) {
+        if (currentSortField === 'price') {
+            priceBtn.classList.add('active');
+            priceBtn.querySelector('.arrow').textContent = currentSortAscending ? '↑' : '↓';
+        } else {
+            priceBtn.classList.remove('active');
+            priceBtn.querySelector('.arrow').textContent = '↑';
+        }
+    }
+}
+</script>
+
+<!-- Filtering logic for table -->
+    <style>
+        .table-widget-container {
+            max-width: 1200px;
+        }
+        
+        .filters {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .filter-inputs {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-group {
+            width: 200px;
+            margin-bottom: 0;
+        }
+        
+        .filter-group label.hidden {
+            display: none;
+        }
+        
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            border: 2px solid rgba(140, 117, 3, 1);
+            font-size: 14px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .filters button {
+            background: transparent;
+            color: #141414;
+            text-transform: uppercase;
+            border: 2px solid rgba(140, 117, 3, 1);
+            padding: 8px 18px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .filters button:hover {
+            background: rgba(140, 117, 3, 1);
+            color: #fff;
+        }
+
+        #apply-filters {
+            background: #15371b;
+            border: none;
+            color: #fff;
+        }
+
+        #apply-filters:hover {
+            background: rgba(0, 25, 0, 1);
+            color: #fff;
+        }
+        
+        .results-info {
+            margin-bottom: 15px;
+            padding: 0 12px;
+            font-weight: 500;
+            color: #7f8c8d;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            table-layout: fixed;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            width: 20%;
+        }
+        
+        th {
+            background-color: #15371b;
+            color: white;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+        }
+        
+        th:hover {
+            background-color: rgba(0, 25, 0, 1);
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: rgb(42 109 54 / 30%);
+        }
+        
+        .status-sold {
+            color: #e42f2f;
+            font-weight: 600;
+        }
+        
+        .status-available {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .status-under-contract {
+            color: #FFC001;
+            font-weight: 600;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .sort-toggle-btn.active {
+            background: rgba(140, 117, 3, 1);
+            color: #fff;
+        }
+        .sort-toggle-btn .arrow {
+            font-size: 18px;
+        }
+        @media (max-width: 768px) {
+            .filter-container {
+                justify-content: center;
+            }
+            .filters {
+                align-items: stretch;
+                border-radius: 0;
+                margin-bottom: 10px
+            }
+            .filter-group {
+                width: 140px;
+            }
+            .filter-group select {
+                padding: 8px;
+                font-size: 12px;
+            }
+            .filters button {
+                padding: 8px 12px;
+                font-size: 12px;
+                width: 140px;
+            }        
+            .sort-toggle-btn .arrow {
+                font-size: 12px;
+            }
+            .results-info {
+                padding: 0 5px;
+            }
+            th, td {
+                padding: 5px;
+                font-size: 12px;
+            }
+            .table-container {
+                width: 100%;
+                overflow-x: auto;
+            }
+            table {
+                width: 100%;
+                min-width: 330px;
+            }
+                    
+            .table-widget-container {
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
+
+
+<div class="table-widget-container">
+    <div class="filters">
+        <div class="filter-container">
+            <div class="filter-inputs">
+                <div class="filter-group">
+                    <label for="status-filter" class="hidden" aria-label="hidden">Status:</label>
+                    <select id="status-filter">
+                        <option value="all">Status</option>
+                        <option value="Sold">Sold</option>
+                        <option value="Available">Available</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="stage-filter" class="hidden" aria-label="hidden">Stage:</label>
+                    <select id="stage-filter">
+                        <option value="all">Stage</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <button id="sort-area-toggle" class="sort-toggle-btn" type="button">Area <span class="arrow">↑</span></button>
+                <button id="sort-price-toggle" class="sort-toggle-btn" type="button">Price <span class="arrow">↑</span></button>
+            </div>
+            <div class="filter-buttons">
+                <button id="apply-filters">Apply Filters</button>
+                <button class="reset" id="reset-filters">Reset Filters</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="results-info">
+        Showing <span id="results-count">0</span> of <span id="total-count">0</span> lots
+    </div>
+    
+    <div class="table-container">
+        <table id="lots-table">
+            <thead>
+                <tr>
+                        <th data-sort="lot">Lot # ↕</th>
+                        <th data-sort="status">Status ↕</th>
+                        <th data-sort="area">Area (m²) ↕</th>
+                        <th data-sort="stage">Stage ↕</th>
+                        <th data-sort="price">Price ↕</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Data will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>

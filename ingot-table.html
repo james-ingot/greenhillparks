@@ -1,0 +1,48 @@
+<!-- This is the table added to code widget in rocketspark for reference -->
+<div class="container">
+    <div class="filters">
+        <div class="filter-container">
+            <div class="filter-group">
+                <label for="status-filter" class="hidden" aria-label="hidden">Status:</label>
+                <select id="status-filter">
+                    <option value="all">Status</option>
+                    <option value="Sold">Sold</option>
+                    <option value="Available">Available</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="stage-filter" class="hidden" aria-label="hidden">Stage:</label>
+                <select id="stage-filter">
+                    <option value="all">Stage</option>
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+            </div>
+        </div>
+        <div class="filter-buttons">
+            <button id="apply-filters">Apply Filters</button>
+            <button class="reset" id="reset-filters">Reset Filters</button>
+        </div>
+    </div>
+    
+    <div class="results-info">
+        Showing <span id="results-count">0</span> of <span id="total-count">0</span> lots
+    </div>
+    
+    <div class="table-container">
+        <table id="lots-table">
+            <thead>
+                <tr>
+                        <th data-sort="lot">Lot # ↕</th>
+                        <th data-sort="status">Status ↕</th>
+                        <th data-sort="area">Area (m²) ↕</th>
+                        <th data-sort="stage">Stage ↕</th>
+                        <th data-sort="price">Price ↕</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Data will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
