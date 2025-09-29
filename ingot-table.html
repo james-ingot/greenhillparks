@@ -1,3 +1,7 @@
+<!-- Include CDN for Ingot Table Styles -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/james-ingot/greenhillparks@main/ingot-table-styles.css">
+<script src="https://cdn.jsdelivr.net/gh/james-ingot/greenhillparks@main/ingot-table.js"></script>
+
 <!-- This is the table added to code widget in rocketspark for reference -->
 <div class="container">
     <div class="filters">
@@ -29,15 +33,21 @@
         Showing <span id="results-count">0</span> of <span id="total-count">0</span> lots
     </div>
     
-    <div class="table-container">
+    <!-- Loading Spinner -->
+    <div id="loading-container" class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading lot data...</div>
+    </div>
+    
+    <div class="table-container" id="table-container">
         <table id="lots-table">
             <thead>
                 <tr>
-                        <th data-sort="lot">Lot # ↕</th>
-                        <th data-sort="status">Status ↕</th>
-                        <th data-sort="area">Area (m²) ↕</th>
-                        <th data-sort="stage">Stage ↕</th>
-                        <th data-sort="price">Price ↕</th>
+                    <th data-sort="lot">Lot # ↕</th>
+                    <th data-sort="status">Status ↕</th>
+                    <th data-sort="area">Area (m²) ↕</th>
+                    <th data-sort="stage">Stage ↕</th>
+                    <th data-sort="price">Price ↕</th>
                 </tr>
             </thead>
             <tbody id="table-body">
