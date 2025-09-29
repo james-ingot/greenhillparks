@@ -1,4 +1,3 @@
-<!-- Fetch data from Google Sheets -->
 <script>
 const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz2re1uG4QMv6oO57FAtIulCVLQfwoTjz3PC0A55C5N3oPTiSTF_4qoxqV7iVLsuVoB/exec';
 let currentSortField = null;
@@ -12,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (urlStageMatch) {
         stageFromUrl = urlStageMatch[1];
     }
+
+    showLoading();
 
     fetch(WEB_APP_URL)
         .then(response => response.json())
@@ -48,19 +49,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     populateFilters();
                 }
-                // Sort so 'Available' status is at the top on initial load
+                // Sort so 'Available' status is at the top on initial load, then by Stage ascending
                 const sortedInitial = [...lotData].sort((a, b) => {
+                    // Primary sort: Available status first
                     if (a.status === 'Available' && b.status !== 'Available') return -1;
                     if (a.status !== 'Available' && b.status === 'Available') return 1;
-                    return 0;
+
+                    // For Available, move High Density to bottom
+                    if (a.status === 'Available' && b.status === 'Available') {
+                        const aHigh = String(a.stage).toLowerCase().includes('high density');
+                        const bHigh = String(b.stage).toLowerCase().includes('high density');
+                        if (aHigh && !bHigh) return 1;
+                        if (!aHigh && bHigh) return -1;
+                    }
+
+                    // Secondary sort: Stage ascending (same logic as in sortTable function)
+                    const extractStageNumber = (stage) => {
+                        const match = String(stage).match(/(\d+)/);
+                        return match ? parseInt(match[1]) : 0;
+                    };
+                    const extractStageSuffix = (stage) => {
+                        const match = String(stage).match(/\d+([A-Z]*)$/i);
+                        return match ? match[1].toLowerCase() : '';
+                    };
+                    const numA = extractStageNumber(a.stage);
+                    const numB = extractStageNumber(b.stage);
+                    const suffixA = extractStageSuffix(a.stage);
+                    const suffixB = extractStageSuffix(b.stage);
+                    // First compare by stage number
+                    if (numA !== numB) {
+                        return numA - numB; // ascending order
+                    }
+                    // If numbers are the same, compare by suffix (no suffix comes before suffix)
+                    if (suffixA === '' && suffixB !== '') return -1;
+                    if (suffixA !== '' && suffixB === '') return 1;
+                    // Both have suffixes or both don't, use string comparison
+                    return suffixA.localeCompare(suffixB);
                 });
+                // Hide loading spinner and show table
+                hideLoading();
                 renderTable(sortedInitial);
             } else {
+                // Hide loading spinner and show error
+                hideLoading();
                 document.getElementById('table-body').innerHTML = 
                     '<tr><td colspan="9">Error loading data: ' + data.error + '</td></tr>';
             }
         })
         .catch(error => {
+            // Hide loading spinner and show error
+            hideLoading();
             document.getElementById('table-body').innerHTML = 
                 '<tr><td colspan="9">Error connecting to data source: ' + error.message + '</td></tr>';
         });
@@ -160,7 +198,7 @@ function resetFilters() {
 
 function formatPrice(price) {
     if (typeof price === 'number') {
-        return '$' + price.toLocaleString();
+        return '$' + Math.round(price).toLocaleString();
     }
     if (typeof price === 'string') {
         let trimmed = price.trim();
@@ -169,13 +207,13 @@ function formatPrice(price) {
         if (millionMatch) {
             let num = parseFloat(millionMatch[1].replace(/,/g, ''));
             if (!isNaN(num)) {
-                return '$' + (num * 1_000_000).toLocaleString();
+                return '$' + Math.round(num * 1_000_000).toLocaleString();
             }
         }
         // Handle normal numbers, with or without $
         let num = parseFloat(trimmed.replace(/[$,]/g, ''));
         if (!isNaN(num)) {
-            return '$' + num.toLocaleString();
+            return '$' + Math.round(num).toLocaleString();
         }
     }
     return price;
@@ -300,6 +338,46 @@ function sortTable(field, ascending) {
             valueB = parsePriceForSort(valueB);
         }
 
+        if (field === 'stage') {
+            // For Available, move High Density to bottom
+            if (a.status === 'Available' && b.status === 'Available') {
+                const aHigh = String(a.stage).toLowerCase().includes('high density');
+                const bHigh = String(b.stage).toLowerCase().includes('high density');
+                if (aHigh && !bHigh) return 1;
+                if (!aHigh && bHigh) return -1;
+            }
+            // Extract numeric part from stage for proper sorting
+            // Handle "Stage 25A", "Stage 18", etc.
+            const extractStageNumber = (stage) => {
+                const match = String(stage).match(/(\d+)/);
+                return match ? parseInt(match[1]) : 0;
+            };
+            const extractStageSuffix = (stage) => {
+                const match = String(stage).match(/\d+([A-Z]*)$/i);
+                return match ? match[1].toLowerCase() : '';
+            };
+            const numA = extractStageNumber(valueA);
+            const numB = extractStageNumber(valueB);
+            const suffixA = extractStageSuffix(valueA);
+            const suffixB = extractStageSuffix(valueB);
+            // First compare by number
+            if (numA !== numB) {
+                valueA = numA;
+                valueB = numB;
+            } else {
+                // If numbers are the same, compare by suffix (A comes after no suffix)
+                if (suffixA === '' && suffixB !== '') {
+                    return ascending ? -1 : 1;
+                }
+                if (suffixA !== '' && suffixB === '') {
+                    return ascending ? 1 : -1;
+                }
+                // Both have suffixes or both don't, use string comparison
+                valueA = suffixA;
+                valueB = suffixB;
+            }
+        }
+
         if (valueA < valueB) return ascending ? -1 : 1;
         if (valueA > valueB) return ascending ? 1 : -1;
         return 0;
@@ -332,212 +410,286 @@ function updateSortToggleButtons() {
         }
     }
 }
+
+function showLoading() {
+    const loadingContainer = document.getElementById('loading-container');
+    const tableContainer = document.getElementById('table-container');
+    const resultsInfo = document.querySelector('.results-info');
+    const filters = document.querySelector('.filters');
+    
+    if (loadingContainer) {
+        loadingContainer.classList.remove('hidden');
+    }
+    if (tableContainer) {
+        tableContainer.classList.add('hidden');
+    }
+    if (resultsInfo) {
+        resultsInfo.classList.add('hidden');
+    }
+    if (filters) {
+        filters.classList.add('hidden');
+    }
+}
+
+function hideLoading() {
+    const loadingContainer = document.getElementById('loading-container');
+    const tableContainer = document.getElementById('table-container');
+    const resultsInfo = document.querySelector('.results-info');
+    const filters = document.querySelector('.filters');
+    
+    if (loadingContainer) {
+        loadingContainer.classList.add('hidden');
+    }
+    if (tableContainer) {
+        tableContainer.classList.remove('hidden');
+    }
+    if (resultsInfo) {
+        resultsInfo.classList.remove('hidden');
+    }
+    if (filters) {
+        filters.classList.remove('hidden');
+    }
+}
 </script>
 
 <!-- Filtering logic for table -->
-    <style>
-        .table-widget-container {
-            max-width: 1200px;
-        }
-        
-        .filters {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 25px;
-            padding: 12px;
-            flex-wrap: wrap;
-        }
+<style>
+.table-widget-container {
+    max-width: 1200px;
+}
 
-        .filter-container {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            width: 100%;
-        }
+.filters {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    padding: 12px;
+    flex-wrap: wrap;
+}
 
-        .filter-inputs {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .filter-group {
-            width: 200px;
-            margin-bottom: 0;
-        }
-        
-        .filter-group label.hidden {
-            display: none;
-        }
-        
-        .filter-group select, .filter-group input {
-            width: 100%;
-            padding: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            border: 2px solid rgba(140, 117, 3, 1);
-            font-size: 14px;
-        }
-        
-        .filter-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
+.filter-container {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    width: 100%;
+}
 
-        .filters button {
-            background: transparent;
-            color: #141414;
-            text-transform: uppercase;
-            border: 2px solid rgba(140, 117, 3, 1);
-            padding: 8px 18px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.3s;
-        }
-        
-        .filters button:hover {
-            background: rgba(140, 117, 3, 1);
-            color: #fff;
-        }
+.filter-inputs {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
 
-        #apply-filters {
-            background: #15371b;
-            border: none;
-            color: #fff;
-        }
+.filter-group {
+    width: 200px;
+    margin-bottom: 0;
+}
 
-        #apply-filters:hover {
-            background: rgba(0, 25, 0, 1);
-            color: #fff;
-        }
-        
-        .results-info {
-            margin-bottom: 15px;
-            padding: 0 12px;
-            font-weight: 500;
-            color: #7f8c8d;
-        }
-        
-        .table-container {
-            overflow-x: auto;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            table-layout: fixed;
-        }
-        
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-            width: 20%;
-        }
-        
-        th {
-            background-color: #15371b;
-            color: white;
-            position: sticky;
-            top: 0;
-            cursor: pointer;
-        }
-        
-        th:hover {
-            background-color: rgba(0, 25, 0, 1);
-        }
-        
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        
-        tr:hover {
-            background-color: rgb(42 109 54 / 30%);
-        }
-        
-        .status-sold {
-            color: #e42f2f;
-            font-weight: 600;
-        }
-        
-        .status-available {
-            color: #27ae60;
-            font-weight: 600;
-        }
+.filter-group label.hidden {
+    display: none;
+}
 
-        .status-under-contract {
-            color: #FFC001;
-            font-weight: 600;
-        }
-        
-        .no-results {
-            text-align: center;
-            padding: 30px;
-            color: #7f8c8d;
-            font-style: italic;
-        }
+.filter-group select, .filter-group input {
+    width: 100%;
+    padding: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 2px solid rgba(140, 117, 3, 1);
+    font-size: 14px;
+}
 
-        .sort-toggle-btn.active {
-            background: rgba(140, 117, 3, 1);
-            color: #fff;
-        }
-        .sort-toggle-btn .arrow {
-            font-size: 18px;
-        }
-        @media (max-width: 768px) {
-            .filter-container {
-                justify-content: center;
-            }
-            .filters {
-                align-items: stretch;
-                border-radius: 0;
-                margin-bottom: 10px
-            }
-            .filter-group {
-                width: 140px;
-            }
-            .filter-group select {
-                padding: 8px;
-                font-size: 12px;
-            }
-            .filters button {
-                padding: 8px 12px;
-                font-size: 12px;
-                width: 140px;
-            }        
-            .sort-toggle-btn .arrow {
-                font-size: 12px;
-            }
-            .results-info {
-                padding: 0 5px;
-            }
-            th, td {
-                padding: 5px;
-                font-size: 12px;
-            }
-            .table-container {
-                width: 100%;
-                overflow-x: auto;
-            }
-            table {
-                width: 100%;
-                min-width: 330px;
-            }
-                    
-            .table-widget-container {
-                margin: 0;
-                padding: 0;
-            }
-        }
-    </style>
+.filter-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
 
+.filters button {
+    background: transparent;
+    color: #141414;
+    text-transform: uppercase;
+    border: 2px solid rgba(140, 117, 3, 1);
+    padding: 8px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.filters button:hover {
+    background: rgba(140, 117, 3, 1);
+    color: #fff;
+}
+
+#apply-filters {
+    background: #15371b;
+    border: none;
+    color: #fff;
+}
+
+#apply-filters:hover {
+    background: rgba(0, 25, 0, 1);
+    color: #fff;
+}
+
+.results-info {
+    margin-bottom: 15px;
+    padding: 0 12px;
+    font-weight: 500;
+    color: #7f8c8d;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    table-layout: fixed;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    width: 20%;
+}
+
+th {
+    background-color: #15371b;
+    color: white;
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+}
+
+th:hover {
+    background-color: rgba(0, 25, 0, 1);
+}
+
+tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+tr:hover {
+    background-color: rgb(42 109 54 / 30%);
+}
+
+.status-sold {
+    color: #e42f2f;
+    font-weight: 600;
+}
+
+.status-available {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.status-under-contract {
+    color: #FFC001;
+    font-weight: 600;
+}
+
+.no-results {
+    text-align: center;
+    padding: 30px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.sort-toggle-btn.active {
+    background: rgba(140, 117, 3, 1);
+    color: #fff;
+}
+.sort-toggle-btn .arrow {
+    font-size: 18px;
+}
+
+/* Loading Spinner */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #15371b;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    color: #7f8c8d;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.hidden {
+    display: none !important;
+}
+@media (max-width: 768px) {
+    .filter-container {
+        justify-content: center;
+    }
+    .filters {
+        align-items: stretch;
+        border-radius: 0;
+        margin-bottom: 10px
+    }
+    .filter-group {
+        width: 140px;
+    }
+    .filter-group select {
+        padding: 8px;
+        font-size: 12px;
+    }
+    .filters button {
+        padding: 8px 12px;
+        font-size: 12px;
+        width: 140px;
+    }        
+    .sort-toggle-btn .arrow {
+        font-size: 12px;
+    }
+    .results-info {
+        padding: 0 5px;
+    }
+    th, td {
+        padding: 5px;
+        font-size: 12px;
+    }
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        min-width: 330px;
+    }
+            
+    .table-widget-container {
+        margin: 0;
+        padding: 0;
+    }
+}
+</style>
 
 <div class="table-widget-container">
     <div class="filters">
@@ -573,15 +725,20 @@ function updateSortToggleButtons() {
         Showing <span id="results-count">0</span> of <span id="total-count">0</span> lots
     </div>
     
-    <div class="table-container">
+    <div id="loading-container" class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading lot data...</div>
+    </div>
+    
+    <div class="table-container" id="table-container">
         <table id="lots-table">
             <thead>
                 <tr>
-                        <th data-sort="lot">Lot # ↕</th>
-                        <th data-sort="status">Status ↕</th>
-                        <th data-sort="area">Area (m²) ↕</th>
-                        <th data-sort="stage">Stage ↕</th>
-                        <th data-sort="price">Price ↕</th>
+                    <th data-sort="lot">Lot # ↕</th>
+                    <th data-sort="status">Status ↕</th>
+                    <th data-sort="area">Area (m²) ↕</th>
+                    <th data-sort="stage">Stage ↕</th>
+                    <th data-sort="price">Price ↕</th>
                 </tr>
             </thead>
             <tbody id="table-body">

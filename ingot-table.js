@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
         stageFromUrl = urlStageMatch[1];
     }
 
+    showLoading();
+
     fetch(WEB_APP_URL)
         .then(response => response.json())
         .then(data => {
@@ -46,19 +48,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     populateFilters();
                 }
-                // Sort so 'Available' status is at the top on initial load
+                // Sort so 'Available' status is at the top on initial load, then by Stage ascending
                 const sortedInitial = [...lotData].sort((a, b) => {
+                    // Primary sort: Available status first
                     if (a.status === 'Available' && b.status !== 'Available') return -1;
                     if (a.status !== 'Available' && b.status === 'Available') return 1;
-                    return 0;
+
+                    // For Available, move High Density to bottom
+                    if (a.status === 'Available' && b.status === 'Available') {
+                        const aHigh = String(a.stage).toLowerCase().includes('high density');
+                        const bHigh = String(b.stage).toLowerCase().includes('high density');
+                        if (aHigh && !bHigh) return 1;
+                        if (!aHigh && bHigh) return -1;
+                    }
+
+                    // Secondary sort: Stage ascending (same logic as in sortTable function)
+                    const extractStageNumber = (stage) => {
+                        const match = String(stage).match(/(\d+)/);
+                        return match ? parseInt(match[1]) : 0;
+                    };
+                    const extractStageSuffix = (stage) => {
+                        const match = String(stage).match(/\d+([A-Z]*)$/i);
+                        return match ? match[1].toLowerCase() : '';
+                    };
+                    const numA = extractStageNumber(a.stage);
+                    const numB = extractStageNumber(b.stage);
+                    const suffixA = extractStageSuffix(a.stage);
+                    const suffixB = extractStageSuffix(b.stage);
+                    // First compare by stage number
+                    if (numA !== numB) {
+                        return numA - numB; // ascending order
+                    }
+                    // If numbers are the same, compare by suffix (no suffix comes before suffix)
+                    if (suffixA === '' && suffixB !== '') return -1;
+                    if (suffixA !== '' && suffixB === '') return 1;
+                    // Both have suffixes or both don't, use string comparison
+                    return suffixA.localeCompare(suffixB);
                 });
+                // Hide loading spinner and show table
+                hideLoading();
                 renderTable(sortedInitial);
             } else {
+                // Hide loading spinner and show error
+                hideLoading();
                 document.getElementById('table-body').innerHTML = 
                     '<tr><td colspan="9">Error loading data: ' + data.error + '</td></tr>';
             }
         })
         .catch(error => {
+            // Hide loading spinner and show error
+            hideLoading();
             document.getElementById('table-body').innerHTML = 
                 '<tr><td colspan="9">Error connecting to data source: ' + error.message + '</td></tr>';
         });
@@ -158,7 +197,7 @@ function resetFilters() {
 
 function formatPrice(price) {
     if (typeof price === 'number') {
-        return '$' + price.toLocaleString();
+        return '$' + Math.round(price).toLocaleString();
     }
     if (typeof price === 'string') {
         let trimmed = price.trim();
@@ -167,13 +206,13 @@ function formatPrice(price) {
         if (millionMatch) {
             let num = parseFloat(millionMatch[1].replace(/,/g, ''));
             if (!isNaN(num)) {
-                return '$' + (num * 1_000_000).toLocaleString();
+                return '$' + Math.round(num * 1_000_000).toLocaleString();
             }
         }
         // Handle normal numbers, with or without $
         let num = parseFloat(trimmed.replace(/[$,]/g, ''));
         if (!isNaN(num)) {
-            return '$' + num.toLocaleString();
+            return '$' + Math.round(num).toLocaleString();
         }
     }
     return price;
@@ -298,6 +337,46 @@ function sortTable(field, ascending) {
             valueB = parsePriceForSort(valueB);
         }
 
+        if (field === 'stage') {
+            // For Available, move High Density to bottom
+            if (a.status === 'Available' && b.status === 'Available') {
+                const aHigh = String(a.stage).toLowerCase().includes('high density');
+                const bHigh = String(b.stage).toLowerCase().includes('high density');
+                if (aHigh && !bHigh) return 1;
+                if (!aHigh && bHigh) return -1;
+            }
+            // Extract numeric part from stage for proper sorting
+            // Handle "Stage 25A", "Stage 18", etc.
+            const extractStageNumber = (stage) => {
+                const match = String(stage).match(/(\d+)/);
+                return match ? parseInt(match[1]) : 0;
+            };
+            const extractStageSuffix = (stage) => {
+                const match = String(stage).match(/\d+([A-Z]*)$/i);
+                return match ? match[1].toLowerCase() : '';
+            };
+            const numA = extractStageNumber(valueA);
+            const numB = extractStageNumber(valueB);
+            const suffixA = extractStageSuffix(valueA);
+            const suffixB = extractStageSuffix(valueB);
+            // First compare by number
+            if (numA !== numB) {
+                valueA = numA;
+                valueB = numB;
+            } else {
+                // If numbers are the same, compare by suffix (A comes after no suffix)
+                if (suffixA === '' && suffixB !== '') {
+                    return ascending ? -1 : 1;
+                }
+                if (suffixA !== '' && suffixB === '') {
+                    return ascending ? 1 : -1;
+                }
+                // Both have suffixes or both don't, use string comparison
+                valueA = suffixA;
+                valueB = suffixB;
+            }
+        }
+
         if (valueA < valueB) return ascending ? -1 : 1;
         if (valueA > valueB) return ascending ? 1 : -1;
         return 0;
@@ -328,5 +407,45 @@ function updateSortToggleButtons() {
             priceBtn.classList.remove('active');
             priceBtn.querySelector('.arrow').textContent = '↑';
         }
+    }
+}
+
+function showLoading() {
+    const loadingContainer = document.getElementById('loading-container');
+    const tableContainer = document.getElementById('table-container');
+    const resultsInfo = document.querySelector('.results-info');
+    const filters = document.querySelector('.filters');
+    
+    if (loadingContainer) {
+        loadingContainer.classList.remove('hidden');
+    }
+    if (tableContainer) {
+        tableContainer.classList.add('hidden');
+    }
+    if (resultsInfo) {
+        resultsInfo.classList.add('hidden');
+    }
+    if (filters) {
+        filters.classList.add('hidden');
+    }
+}
+
+function hideLoading() {
+    const loadingContainer = document.getElementById('loading-container');
+    const tableContainer = document.getElementById('table-container');
+    const resultsInfo = document.querySelector('.results-info');
+    const filters = document.querySelector('.filters');
+    
+    if (loadingContainer) {
+        loadingContainer.classList.add('hidden');
+    }
+    if (tableContainer) {
+        tableContainer.classList.remove('hidden');
+    }
+    if (resultsInfo) {
+        resultsInfo.classList.remove('hidden');
+    }
+    if (filters) {
+        filters.classList.remove('hidden');
     }
 }

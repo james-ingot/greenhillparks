@@ -1,27 +1,30 @@
-<!-- This is the table added to code widget in rocketspark for reference -->
-<div class="container">
+<div class="table-widget-container">
     <div class="filters">
         <div class="filter-container">
-            <div class="filter-group">
-                <label for="status-filter" class="hidden" aria-label="hidden">Status:</label>
-                <select id="status-filter">
-                    <option value="all">Status</option>
-                    <option value="Sold">Sold</option>
-                    <option value="Available">Available</option>
-                </select>
+            <div class="filter-inputs">
+                <div class="filter-group">
+                    <label for="status-filter" class="hidden" aria-label="hidden">Status:</label>
+                    <select id="status-filter">
+                        <option value="all">Status</option>
+                        <option value="Sold">Sold</option>
+                        <option value="Available">Available</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="stage-filter" class="hidden" aria-label="hidden">Stage:</label>
+                    <select id="stage-filter">
+                        <option value="all">Stage</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <button id="sort-area-toggle" class="sort-toggle-btn" type="button">Area <span class="arrow">↑</span></button>
+                <button id="sort-price-toggle" class="sort-toggle-btn" type="button">Price <span class="arrow">↑</span></button>
             </div>
-            
-            <div class="filter-group">
-                <label for="stage-filter" class="hidden" aria-label="hidden">Stage:</label>
-                <select id="stage-filter">
-                    <option value="all">Stage</option>
-                    <!-- Options will be populated by JavaScript -->
-                </select>
+            <div class="filter-buttons">
+                <button id="apply-filters">Apply Filters</button>
+                <button class="reset" id="reset-filters">Reset Filters</button>
             </div>
-        </div>
-        <div class="filter-buttons">
-            <button id="apply-filters">Apply Filters</button>
-            <button class="reset" id="reset-filters">Reset Filters</button>
         </div>
     </div>
     
@@ -29,15 +32,20 @@
         Showing <span id="results-count">0</span> of <span id="total-count">0</span> lots
     </div>
     
-    <div class="table-container">
+    <div id="loading-container" class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading lot data...</div>
+    </div>
+    
+    <div class="table-container" id="table-container">
         <table id="lots-table">
             <thead>
                 <tr>
-                        <th data-sort="lot">Lot # ↕</th>
-                        <th data-sort="status">Status ↕</th>
-                        <th data-sort="area">Area (m²) ↕</th>
-                        <th data-sort="stage">Stage ↕</th>
-                        <th data-sort="price">Price ↕</th>
+                    <th data-sort="lot">Lot # ↕</th>
+                    <th data-sort="status">Status ↕</th>
+                    <th data-sort="area">Area (m²) ↕</th>
+                    <th data-sort="stage">Stage ↕</th>
+                    <th data-sort="price">Price ↕</th>
                 </tr>
             </thead>
             <tbody id="table-body">
