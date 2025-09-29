@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     lotData = lotData.filter(item => {
                         const normalized = String(item.stage).replace(/\s+/g, '').toLowerCase();
                         const urlStage = String(stageFromUrl).replace(/\s+/g, '').toLowerCase();
+                        if (normalized.includes('highdensity')) {
+                            return true;
+                        }
                         return (
                             normalized === `stage${urlStage}` ||
                             normalized === urlStage
@@ -222,7 +225,8 @@ function renderTable(data) {
     const tableBody = document.getElementById('table-body');
     tableBody.innerHTML = '';
 
-    // Check for stage-{number} in the URL
+    // Check for stage-{something} in the URL
+    const urlStagePath = window.location.pathname.toLowerCase().includes('stage-');
     const urlStageMatch = window.location.pathname.match(/stage-(\d+)/i);
     const showStageColumn = !urlStageMatch;
 
@@ -276,13 +280,23 @@ function renderTable(data) {
             // Build the section URL for this row
             let stagePart = String(item.stage).replace(/^stage\s*/i, '').trim();
             stagePart = stagePart.replace(/\s+/g, '');
-            const sectionUrl = `https://www.greenhillpark.co.nz/stage-${stagePart}-sections/`;
+            let sectionUrl;
+            if (/high\s*density/i.test(item.stage)) {
+                // Extract just the number for High Density stages
+                const numMatch = String(item.stage).match(/(\d+)/);
+                const stageNum = numMatch ? numMatch[1] : stagePart;
+                sectionUrl = `https://www.greenhillpark.co.nz/stage-${stageNum}-sections/`;
+            } else {
+                sectionUrl = `https://www.greenhillpark.co.nz/stage-${stagePart}-sections/`;
+            }
             const row = document.createElement('tr');
-            row.style.cursor = 'pointer';
-            // Open in a new tab (optional)
-            row.addEventListener('click', () => {
-                window.open(sectionUrl, '_blank');
-            });
+            // Only make row clickable if not on a stage-specific page
+            if (!urlStagePath) {
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', () => {
+                    window.open(sectionUrl, '_blank');
+                });
+            }
             row.innerHTML = showStageColumn
                 ? `
                     <td>${item.lot}</td>
