@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const normalized = String(item.stage).replace(/\s+/g, '').toLowerCase();
                         const urlStage = String(stageFromUrl).replace(/\s+/g, '').toLowerCase();
                         if (normalized.includes('highdensity')) {
-                            return true;
+                            return normalized.includes(`stage${urlStage}highdensity`);
                         }
                         return (
                             normalized === `stage${urlStage}` ||
