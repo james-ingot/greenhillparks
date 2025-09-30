@@ -53,9 +53,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 // Sort so 'Available' status is at the top on initial load, then by Stage ascending
                 const sortedInitial = [...lotData].sort((a, b) => {
-                    // Primary sort: Available status first
-                    if (a.status === 'Available' && b.status !== 'Available') return -1;
-                    if (a.status !== 'Available' && b.status === 'Available') return 1;
+                    // Primary sort: Available first, then Contract, then Sold, then others
+                    const statusOrder = status => {
+                        if (status === 'Available') return 0;
+                        if (status === 'Contract') return 1;
+                        if (status === 'Sold') return 2;
+                        return 3;
+                    };
+                    const orderA = statusOrder(a.status);
+                    const orderB = statusOrder(b.status);
+                    if (orderA !== orderB) return orderA - orderB;
 
                     // For Available, move High Density to bottom
                     if (a.status === 'Available' && b.status === 'Available') {
@@ -276,7 +283,10 @@ function renderTable(data) {
         tableBody.appendChild(row);
     } else {
         data.forEach(item => {
-            const statusClass = item.status === 'Sold' ? 'status-sold' : 'status-available';
+            let statusClass = 'status-available';
+            if (item.status === 'Sold') statusClass = 'status-sold';
+            else if (item.status === 'Contract') statusClass = 'status-contract';
+
             // Build the section URL for this row
             let stagePart = String(item.stage).replace(/^stage\s*/i, '').trim();
             stagePart = stagePart.replace(/\s+/g, '');
