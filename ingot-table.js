@@ -292,10 +292,10 @@ function renderTable(data) {
             stagePart = stagePart.replace(/\s+/g, '');
             let sectionUrl;
             if (/high\s*density/i.test(item.stage)) {
-                // Extract just the number for High Density stages
-                const numMatch = String(item.stage).match(/(\d+)/);
-                const stageNum = numMatch ? numMatch[1] : stagePart;
-                sectionUrl = `https://www.greenhillpark.co.nz/stage-${stageNum}-sections/`;
+                // Extract number and optional letter (e.g., "25A") for High Density stages
+                const match = String(item.stage).match(/stage\s*(\d+[a-zA-Z]?)/i);
+                const stageId = match ? match[1] : stagePart;
+                sectionUrl = `https://www.greenhillpark.co.nz/stage-${stageId}-sections/`;
             } else {
                 sectionUrl = `https://www.greenhillpark.co.nz/stage-${stagePart}-sections/`;
             }
