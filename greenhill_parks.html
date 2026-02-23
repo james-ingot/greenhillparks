@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     status: item.status || item.Status || '',
                     area: item.area || item.Area || item["Area (m2)"] || '',
                     stage: item.stage || item.Stage || '',
-                    price: item.price || item.Price || ''
+                    price: item["Excl GST"] || item["excl_gst"] || item["ExclGST"] || '',
+                    incl_gst: item["Incl GST"] || item["incl_gst"] || item["InclGST"] || ''
                 })).filter(item => {
                     // Remove any with stage 'Stage 16' or 'Stage 17' (case/whitespace insensitive)
                     const s = String(item.stage).replace(/\s+/g, '').toLowerCase();
@@ -246,11 +247,13 @@ function renderTable(data) {
                <th data-sort="status">Status ↕</th>
                <th data-sort="area">Area (m²) ↕</th>
                <th data-sort="stage">Stage ↕</th>
-               <th data-sort="price">Price ↕</th>`
+               <th data-sort="price">Excl GST ↕</th>
+               <th data-sort="incl_gst">Incl GST ↕</th>`
             : `<th data-sort="lot">Lot # ↕</th>
                <th data-sort="status">Status ↕</th>
                <th data-sort="area">Area (m²) ↕</th>
-               <th data-sort="price">Price ↕</th>`;
+               <th data-sort="price">Excl GST ↕</th>
+               <th data-sort="incl_gst">Incl GST ↕</th>`;
         // Re-attach sorting event listeners
         document.querySelectorAll('th[data-sort]').forEach(th => {
             th.addEventListener('click', () => {
@@ -280,7 +283,7 @@ function renderTable(data) {
 
     if (data.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="${showStageColumn ? 5 : 4}" class="no-results">No lots match your filters</td>`;
+        row.innerHTML = `<td colspan="${showStageColumn ? 6 : 5}" class="no-results">No lots match your filters</td>`;
         tableBody.appendChild(row);
     } else {
         data.forEach(item => {
@@ -315,12 +318,14 @@ function renderTable(data) {
                     <td>${item.area}</td>
                     <td>${item.stage}</td>
                     <td>${formatPrice(item.price)}</td>
+                    <td>${formatPrice(item["Incl GST"] || item["incl_gst"] || item["InclGST"] || "")}</td>
                   `
                 : `
                     <td>${item.lot}</td>
                     <td class="${statusClass}">${item.status}</td>
                     <td>${item.area}</td>
                     <td>${formatPrice(item.price)}</td>
+                    <td>${formatPrice(item["Incl GST"] || item["incl_gst"] || item["InclGST"] || "")}</td>
                   `;
             tableBody.appendChild(row);
         });
@@ -357,7 +362,7 @@ function sortTable(field, ascending) {
             valueB = parseFloat(valueB) || 0;
         }
 
-        if (field === 'price') {
+        if (field === 'price' || field === 'incl_gst') {
             valueA = parsePriceForSort(valueA);
             valueB = parsePriceForSort(valueB);
         }
@@ -762,7 +767,8 @@ tr:hover {
                     <th data-sort="status">Status ↕</th>
                     <th data-sort="area">Area (m²) ↕</th>
                     <th data-sort="stage">Stage ↕</th>
-                    <th data-sort="price">Price ↕</th>
+                    <th data-sort="price">Excl GST ↕</th>
+                    <th data-sort="incl_gst">Incl GST ↕</th>
                 </tr>
             </thead>
             <tbody id="table-body">
