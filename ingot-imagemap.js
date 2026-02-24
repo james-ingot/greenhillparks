@@ -249,6 +249,23 @@ function _main() {
         toolTipContainer: '<div class="ingot-box"></div>',
     }
 
+    // Helper function to parse lot ranges like "8073-8080" into individual lot numbers
+    function parseLotRange(lotString) {
+        if (lotString.includes('-')) {
+            const parts = lotString.split('-');
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                const start = parseInt(parts[0], 10);
+                const end = parseInt(parts[1], 10);
+                const lots = [];
+                for (let i = start; i <= end; i++) {
+                    lots.push(i.toString());
+                }
+                return lots;
+            }
+        }
+        return [lotString];
+    }
+
     // For each row in the sheet
     sheet.forEach((row, index, array) => {
         row.title = "Lot " + row.Lot + '<span class="close">&#10005;</span>';
@@ -257,7 +274,8 @@ function _main() {
         row.blurb = "";
 
         if (row.Status) row.blurb += `<p><strong>Status:</strong> ${row.Status}</p>`;
-        if (row.Price) row.blurb += `<p><strong>Price:</strong> ${row.Price}</p>`;
+        if (row['Excl GST']) row.blurb += `<p><strong>Price (Excl GST):</strong> ${row['Excl GST']}</p>`;
+        if (row['Incl GST']) row.blurb += `<p><strong>Price (Incl GST):</strong> ${row['Incl GST']}</p>`;
         if (row['Area (m2)']) row.blurb += `<p><strong>Area:</strong> ${row['Area (m2)']} m2</p>`;
         if (row.Length || row.Width) row.blurb += `<p><strong>Length:</strong> ${row.Length || ''}, <strong>Width:</strong> ${row.Width || ''}</p>`;
         if (row.Purchaser) row.blurb += `<p><strong>Builder:</strong> ${row.Purchaser}</p>`;
@@ -302,26 +320,30 @@ function _main() {
             var buttonLink = '<a href="https://www.greenhillpark.co.nz/contact/">Contact Us</a>';
         }
 
-        var area = {
-            key: "lot-" + row.Lot,
-            fillColor: row.fillColor,
-            strokeColor: row.strokeColour,
-
-            render_highlight: {
+        // Parse lot ranges and create an area for each individual lot
+        const individualLots = parseLotRange(row.Lot);
+        
+        individualLots.forEach(lot => {
+            var area = {
+                key: "lot-" + lot,
                 fillColor: row.fillColor,
-                strokeColor: row.strokeColour
-            },
-            isSelectable: row.isSelectable,
+                strokeColor: row.strokeColour,
 
-            toolTip:
-                '<div class="container"><h3 class="ingot-title">' + row.title + '</h3>' +
-                '<p>' + row.blurb + '</p>' +
-                '<div class="ingot-button">' + buttonLink + '</div></div>',
-        };
+                render_highlight: {
+                    fillColor: row.fillColor,
+                    strokeColor: row.strokeColour
+                },
+                isSelectable: row.isSelectable,
 
-        portraitContainer.areas.push(area);
+                toolTip:
+                    '<div class="container"><h3 class="ingot-title">' + row.title + '</h3>' +
+                    '<p>' + row.blurb + '</p>' +
+                    '<div class="ingot-button">' + buttonLink + '</div></div>',
+            };
 
-        landscapeContainer.areas.push(area);
+            portraitContainer.areas.push(area);
+            landscapeContainer.areas.push(area);
+        });
 
     });
 
@@ -348,6 +370,8 @@ function _main() {
     $('.map-landscape-stage-20').mapster(landscapeContainer);
     $('.map-landscape-stage-25A').mapster(landscapeContainer);
     $('.map-landscape-stage-21').mapster(landscapeContainer);
+    // $('.map-landscape-stage-22').mapster(landscapeContainer);
+    // $('.map-landscape-stage-23').mapster(landscapeContainer);
     $('.map-landscape-stage-24').mapster(landscapeContainer);
 
     // }
