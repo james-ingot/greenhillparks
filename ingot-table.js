@@ -116,6 +116,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('stage-filter').addEventListener('change', applyFilters);
     document.getElementById('reset-filters').addEventListener('click', resetFilters);
 
+    // If the page is for a specific stage, remove stage buttons
+    if (stageFromUrl) {
+        const stageButtonsContainer = document.querySelector('.stage-filter-buttons');
+        if (stageButtonsContainer) {
+            stageButtonsContainer.remove();
+        }
+    }
+
     // Add event listeners for stage filter buttons
     document.querySelectorAll('.stage-btn').forEach(btn => {
         btn.addEventListener('click', () => {
