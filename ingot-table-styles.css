@@ -15,10 +15,22 @@
 
 .stage-filter-buttons {
     display: flex;
-    flex-wrap: wrap;
     justify-content: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
     gap: 15px;
     width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* custom scrollbar for horizontal container */
+.stage-filter-buttons::-webkit-scrollbar {
+    height: 6px;
+}
+.stage-filter-buttons::-webkit-scrollbar-thumb {
+    background: rgba(140,117,3,0.5);
+    border-radius: 3px;
 }
 
 .stage-btn {
@@ -29,6 +41,7 @@
     padding: 10px 15px;
     cursor: pointer;
     font-weight: 600;
+    white-space: nowrap;
     transition: background 0.3s, color 0.3s;
     font-size: 14px;
 }
@@ -219,6 +232,9 @@ tr:hover {
     display: none !important;
 }
 @media (max-width: 768px) {
+    .stage-filter-buttons {
+        justify-content: flex-start;
+    }
     .filter-container {
         justify-content: center;
     }
