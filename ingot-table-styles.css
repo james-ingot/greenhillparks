@@ -13,6 +13,36 @@
     flex-wrap: wrap;
 }
 
+.stage-filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    width: 100%;
+}
+
+.stage-btn {
+    background: transparent;
+    color: #141414;
+    text-transform: uppercase;
+    border: 2px solid rgba(140, 117, 3, 1);
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s, color 0.3s;
+    font-size: 14px;
+}
+
+.stage-btn:hover {
+    background: rgba(140, 117, 3, 1);
+    color: #fff;
+}
+
+.stage-btn.active {
+    background: rgba(140, 117, 3, 1);
+    color: #fff;
+}
+
 .filter-container {
     display: flex;
     gap: 15px;

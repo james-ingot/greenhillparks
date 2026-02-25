@@ -112,8 +112,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<tr><td colspan="9">Error connecting to data source: ' + error.message + '</td></tr>';
         });
 
-    document.getElementById('apply-filters').addEventListener('click', applyFilters);
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('stage-filter').addEventListener('change', applyFilters);
     document.getElementById('reset-filters').addEventListener('click', resetFilters);
+
+    // Add event listeners for stage filter buttons
+    document.querySelectorAll('.stage-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const stage = btn.getAttribute('data-stage');
+            document.getElementById('stage-filter').value = stage;
+            
+            // Update active button state
+            document.querySelectorAll('.stage-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            applyFilters();
+        });
+    });
 
     document.querySelectorAll('th[data-sort]').forEach(th => {
             th.addEventListener('click', () => {
@@ -201,6 +216,9 @@ function applyFilters() {
 function resetFilters() {
     document.getElementById('status-filter').value = 'all';
     document.getElementById('stage-filter').value = 'all';
+    
+    // Clear active state from stage buttons
+    document.querySelectorAll('.stage-btn').forEach(btn => btn.classList.remove('active'));
 
     renderTable(lotData);
 }
