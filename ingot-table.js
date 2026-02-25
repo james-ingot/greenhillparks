@@ -179,7 +179,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function populateFilters() {
-    let stages = [...new Set(lotData.map(item => item.stage))].filter(stage => stage);
+    let stages = lotData.map(item => {
+        // Extract base stage (e.g., "Stage 25A" from "Stage 25A High Density Block 1")
+        const baseStage = String(item.stage).split(/\s+High\s+/i)[0].trim();
+        return baseStage;
+    });
+    
+    // Get unique stages
+    stages = [...new Set(stages)].filter(stage => stage);
+    
     // Sort stages descending by number if possible
     stages = stages.sort((a, b) => {
         // Extract numbers from 'Stage 25', 'Stage 18', etc.
@@ -206,8 +214,9 @@ function applyFilters() {
     const stageFilter = document.getElementById('stage-filter').value;
 
     const filteredData = lotData.filter(item => {
-        return (statusFilter === 'all' || item.status === statusFilter) &&
-                     (stageFilter === 'all' || item.stage === stageFilter);
+        const statusMatch = statusFilter === 'all' || item.status === statusFilter;
+        const stageMatch = stageFilter === 'all' || String(item.stage).startsWith(stageFilter);
+        return statusMatch && stageMatch;
     });
 
     renderTable(filteredData);
