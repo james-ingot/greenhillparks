@@ -370,8 +370,8 @@ function _main() {
     $('.map-landscape-stage-20').mapster(landscapeContainer);
     $('.map-landscape-stage-25A').mapster(landscapeContainer);
     $('.map-landscape-stage-21').mapster(landscapeContainer);
-    // $('.map-landscape-stage-22').mapster(landscapeContainer);
-    // $('.map-landscape-stage-23').mapster(landscapeContainer);
+    $('.map-landscape-stage-22').mapster(landscapeContainer);
+    $('.map-landscape-stage-23').mapster(landscapeContainer);
     $('.map-landscape-stage-24').mapster(landscapeContainer);
 
     // }
