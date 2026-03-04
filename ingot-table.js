@@ -23,7 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     status: item.status || item.Status || '',
                     area: item.area || item.Area || item["Area (m2)"] || '',
                     stage: item.stage || item.Stage || '',
-                    price: item.price || item.Price || ''
+                    price: item["Excl GST"] || item["excl_gst"] || item["ExclGST"] || '',
+                    incl_gst: item["Incl GST"] || item["incl_gst"] || item["InclGST"] || ''
                 })).filter(item => {
                     // Remove any with stage 'Stage 16' or 'Stage 17' (case/whitespace insensitive)
                     const s = String(item.stage).replace(/\s+/g, '').toLowerCase();
@@ -114,6 +115,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('status-filter').addEventListener('change', applyFilters);
     document.getElementById('stage-filter').addEventListener('change', applyFilters);
+    const applyFiltersBtn = document.getElementById('apply-filters');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', applyFilters);
+    }
     document.getElementById('reset-filters').addEventListener('click', resetFilters);
 
     // If the page is for a specific stage, remove stage buttons
@@ -182,19 +187,19 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSortToggleButtons();
         });
     }
-    // After initial render, update button state
-    updateSortToggleButtons();
+    // After initial render, update button state if buttons exist
+    if (areaBtn || priceBtn) {
+        updateSortToggleButtons();
+    }
 });
 
 function populateFilters() {
-    let stages = lotData.map(item => {
-        // Extract base stage (e.g., "Stage 25A" from "Stage 25A High Density Block 1")
-        const baseStage = String(item.stage).split(/\s+High\s+/i)[0].trim();
+    // Extract base stage names only (e.g., "Stage 22" from "Stage 22 High Density Block 1")
+    let stages = [...new Set(lotData.map(item => {
+        // Extract the base stage (everything before "High" if it exists)
+        const baseStage = String(item.stage).split(/\s+High\s+/)[0].trim();
         return baseStage;
-    });
-    
-    // Get unique stages
-    stages = [...new Set(stages)].filter(stage => stage);
+    }))].filter(stage => stage);
     
     // Sort stages descending by number if possible
     stages = stages.sort((a, b) => {
@@ -222,9 +227,9 @@ function applyFilters() {
     const stageFilter = document.getElementById('stage-filter').value;
 
     const filteredData = lotData.filter(item => {
-        const statusMatch = statusFilter === 'all' || item.status === statusFilter;
+        // For stage filter, match items that start with the selected stage (includes high density blocks)
         const stageMatch = stageFilter === 'all' || String(item.stage).startsWith(stageFilter);
-        return statusMatch && stageMatch;
+        return (statusFilter === 'all' || item.status === statusFilter) && stageMatch;
     });
 
     renderTable(filteredData);
@@ -236,7 +241,7 @@ function resetFilters() {
     
     // Clear active state from stage buttons
     document.querySelectorAll('.stage-btn').forEach(btn => btn.classList.remove('active'));
-
+    
     renderTable(lotData);
 }
 
@@ -280,11 +285,13 @@ function renderTable(data) {
                <th data-sort="status">Status ↕</th>
                <th data-sort="area">Area (m²) ↕</th>
                <th data-sort="stage">Stage ↕</th>
-               <th data-sort="price">Price ↕</th>`
+               <th data-sort="price">Excl GST ↕</th>
+               <th data-sort="incl_gst">Incl GST ↕</th>`
             : `<th data-sort="lot">Lot # ↕</th>
                <th data-sort="status">Status ↕</th>
                <th data-sort="area">Area (m²) ↕</th>
-               <th data-sort="price">Price ↕</th>`;
+               <th data-sort="price">Excl GST ↕</th>
+               <th data-sort="incl_gst">Incl GST ↕</th>`;
         // Re-attach sorting event listeners
         document.querySelectorAll('th[data-sort]').forEach(th => {
             th.addEventListener('click', () => {
@@ -314,7 +321,7 @@ function renderTable(data) {
 
     if (data.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="${showStageColumn ? 5 : 4}" class="no-results">No lots match your filters</td>`;
+        row.innerHTML = `<td colspan="${showStageColumn ? 6 : 5}" class="no-results">No lots match your filters</td>`;
         tableBody.appendChild(row);
     } else {
         data.forEach(item => {
@@ -349,12 +356,14 @@ function renderTable(data) {
                     <td>${item.area}</td>
                     <td>${item.stage}</td>
                     <td>${formatPrice(item.price)}</td>
+                    <td>${formatPrice(item["Incl GST"] || item["incl_gst"] || item["InclGST"] || "")}</td>
                   `
                 : `
                     <td>${item.lot}</td>
                     <td class="${statusClass}">${item.status}</td>
                     <td>${item.area}</td>
                     <td>${formatPrice(item.price)}</td>
+                    <td>${formatPrice(item["Incl GST"] || item["incl_gst"] || item["InclGST"] || "")}</td>
                   `;
             tableBody.appendChild(row);
         });
@@ -391,7 +400,7 @@ function sortTable(field, ascending) {
             valueB = parseFloat(valueB) || 0;
         }
 
-        if (field === 'price') {
+        if (field === 'price' || field === 'incl_gst') {
             valueA = parsePriceForSort(valueA);
             valueB = parsePriceForSort(valueB);
         }
